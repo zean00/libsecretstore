@@ -1,0 +1,20 @@
+[package]
+name = "secretstore"
+version = "0.1.0"
+authors = ["Sahal Zain <zean00zone@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+jsonrpc-core = "12.0.0"
+ethereum-types = "0.6.0"
+ethkey = { path = "./ethkey" }
+rand = "0.6"
+parity-crypto = "0.4.0"
+parity-bytes = "0.1"
+tiny-keccak = "1.4"
+serde = { version = "1.0.100", features = ["derive"] }
+rustc-hex = "2.0.1"
+hex = "0.3.2"
+
+[lib]
+crate-type = ["cdylib"]
