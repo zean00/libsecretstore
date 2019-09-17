@@ -43,7 +43,7 @@ const dk = lib.get_document_key(sk, serverKey);
 const eset = dk.deref();
 //console.log(eset.encrypted_key);
 
-const enc = lib.encrypt(sk, eset.encrypted_key, "Sahal Arafat Zain");
+const enc = lib.encrypt(sk, eset.encrypted_key, new Buffer('Sahal Arafat Zain').toString('hex'));
 console.log(enc);
 
 

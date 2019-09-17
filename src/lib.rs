@@ -89,10 +89,10 @@ pub unsafe extern "C" fn encrypt(secret: *const c_char, key: *const c_char, data
     let k_str = CStr::from_ptr(key).to_str().unwrap();
     let key = ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, hex::decode(k_str).unwrap().as_ref()).unwrap();
 
-    let d_str = CStr::from_ptr(data).to_str().unwrap();
-    let dd = String::from_str(d_str).unwrap();
+    let dt_str = CStr::from_ptr(data).to_str().unwrap();
+    let dd = hex::decode(dt_str).unwrap();
 
-    let enc = encrypt_document(key, dd.into_bytes()).unwrap();
+    let enc = encrypt_document(key, dd).unwrap();
     let ek = hex::encode(enc);
     let res = CString::new(ek).unwrap();
     let r = res.as_ptr();
@@ -112,8 +112,8 @@ pub unsafe extern "C" fn decrypt_shadow(secret: *const c_char, decrypted_secret:
     let cp = H512::from_str(c_str).unwrap();
 
     let dt_str = CStr::from_ptr(data).to_str().unwrap();
-
     let dd = hex::decode(dt_str).unwrap();
+
     let mut shadows = Vec::new();
     let len = isize::try_from(shadow_len).unwrap();
     for i in 0 ..len {
