@@ -19,6 +19,25 @@ use hex;
 use std::boxed::Box;
 use std::convert::TryFrom;
 
+macro_rules! trychar {
+    ($e:expr) => (match $e {
+        Ok(val) => val,
+        Err(_) => {
+            let res = CString::new("").unwrap();
+            let r = res.as_ptr();
+            std::mem::forget(res);
+            return r;
+        },
+    });
+}
+
+macro_rules! trybox {
+    ($e:expr) => (match $e {
+        Ok(val) => val,
+        Err(_) => return Box::into_raw(Box::new(DocumentKey::default())),
+    });
+}
+
 #[repr(C)]
 pub struct DocumentKey {
 	/// Common encryption point. Pass this to Secret Store 'Document key storing session'
@@ -29,32 +48,48 @@ pub struct DocumentKey {
 	pub encrypted_key: *const c_char,
 }
 
+impl Default for DocumentKey {
+    fn default () -> DocumentKey {
+        let nstr = CString::new("").unwrap();
+        let npr = nstr.as_ptr();
+        std::mem::forget(nstr);
+        let doc = DocumentKey{
+            common_point: npr,
+            encrypted_point: npr,
+            encrypted_key: npr,
+        };
+        return doc;
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn get_document_key(secret: *const c_char, public: *const c_char) -> *const DocumentKey {  
-    let s_str = CStr::from_ptr(secret).to_str().unwrap();
-    let sk = Secret::from_str(s_str).unwrap();
-    let p_str = CStr::from_ptr(public).to_str().unwrap();
-    let pk = H512::from_str(p_str).unwrap();
-    let kp = KeyPair::from_secret(sk).unwrap();
-    let eset = generate_document_key(*kp.public(), pk).unwrap();
+    let s_str = trybox!(CStr::from_ptr(secret).to_str());
+    let sk = trybox!(Secret::from_str(s_str));
+    let p_str = trybox!(CStr::from_ptr(public).to_str());
+    let pk = trybox!(H512::from_str(p_str));
+    let kp = trybox!(KeyPair::from_secret(sk));
+    let eset = trybox!(generate_document_key(*kp.public(), pk));
     let cp = hex::encode(eset.common_point);
-    let cpres = CString::new(cp).unwrap();
+    let cpres = trybox!(CString::new(cp));
     //let cpres = CStr::from_bytes_with_nul_unchecked(&cp.as_ref());
     let cpr = cpres.as_ptr();
     std::mem::forget(cpres);
 
     let ep = hex::encode(eset.encrypted_point);
-    let epres = CString::new(ep).unwrap();
+    let epres = trybox!(CString::new(ep));
     //let epres = CStr::from_bytes_with_nul_unchecked(&ep.as_ref());
     let epr = epres.as_ptr();
     std::mem::forget(epres);
     
 
     let ek = hex::encode(eset.encrypted_key);
-    let ekres = CString::new(ek).unwrap();
+    let ekres = trybox!(CString::new(ek));
     //let ekres = CStr::from_bytes_with_nul_unchecked(&ek.as_bytes());
     let ekr = ekres.as_ptr();
     std::mem::forget(ekres);
+    std::mem::forget(secret);
+    std::mem::forget(public);
     
     Box::into_raw(Box::new(DocumentKey {
 		common_point: cpr,
@@ -65,110 +100,131 @@ pub unsafe extern "C" fn get_document_key(secret: *const c_char, public: *const 
 
 #[no_mangle]
 pub unsafe extern "C" fn sign_hash(secret: *const c_char, hash: *const c_char) -> *const c_char { 
-    let s_str = CStr::from_ptr(secret).to_str().unwrap();
-    let sk = Secret::from_str(s_str).unwrap();
+    let s_str = trychar!(CStr::from_ptr(secret).to_str());
+    let sk = trychar!(Secret::from_str(s_str));
 
-    let h_str = CStr::from_ptr(hash).to_str().unwrap();
-    let hs = H256::from_str(h_str).unwrap();
-    let sig = sign(&sk, &hs).unwrap();
+    let h_str = trychar!(CStr::from_ptr(hash).to_str());
+    let hs = trychar!(H256::from_str(h_str));
+    let sig = trychar!(sign(&sk, &hs));
     
     let sg = format!("{}", sig);
-    //let sg = hex::encode(sig.to_vec());
-    //let res = CStr::from_bytes_with_nul(&sg.as_bytes()).unwrap();
-    let res = CString::new(sg).unwrap();
+    let res = trychar!(CString::new(sg));
     let r = res.as_ptr();
     std::mem::forget(res);
+    std::mem::forget(secret);
+    std::mem::forget(hash);
     r
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn encrypt(secret: *const c_char, key: *const c_char, data: *const c_char) -> *const c_char {
-    let s_str = CStr::from_ptr(secret).to_str().unwrap();
-    let sk = Secret::from_str(s_str).unwrap();
+pub unsafe extern "C" fn encrypt(secret: *const c_char, ekey: *const c_char, data: *const c_char) -> *const c_char {
+    let s_str = trychar!(CStr::from_ptr(secret).to_str());
+    let sk = trychar!(Secret::from_str(s_str));
 
-    let k_str = CStr::from_ptr(key).to_str().unwrap();
-    let key = ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, hex::decode(k_str).unwrap().as_ref()).unwrap();
+    let k_str = trychar!(CStr::from_ptr(ekey).to_str());
+    let bkey = trychar!(hex::decode(k_str));
+    let key = trychar!(ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, bkey.as_ref()));
 
-    let dt_str = CStr::from_ptr(data).to_str().unwrap();
-    let dd = hex::decode(dt_str).unwrap();
+    let dt_str = trychar!(CStr::from_ptr(data).to_str());
+    let dd = trychar!(hex::decode(dt_str));
 
-    let enc = encrypt_document(key, dd).unwrap();
+    let enc = trychar!(encrypt_document(key, dd));
     let ek = hex::encode(enc);
-    let res = CString::new(ek).unwrap();
+    let res = trychar!(CString::new(ek));
     let r = res.as_ptr();
     std::mem::forget(res);
+    std::mem::forget(secret);
+    std::mem::forget(data);
+    std::mem::forget(ekey);
     r
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn decrypt_shadow(secret: *const c_char, decrypted_secret: *const c_char, common_point: *const c_char, decrypt_shadows: *const *const c_char, shadow_len : usize, data: *const c_char) -> *const c_char {
-    let s_str = CStr::from_ptr(secret).to_str().unwrap();
-    let sk = Secret::from_str(s_str).unwrap();
+    let s_str = trychar!(CStr::from_ptr(secret).to_str());
+    let sk = trychar!(Secret::from_str(s_str));
 
-    let d_str = CStr::from_ptr(decrypted_secret).to_str().unwrap();
-    let ds = H512::from_str(d_str).unwrap();
+    let d_str = trychar!(CStr::from_ptr(decrypted_secret).to_str());
+    let ds = trychar!(H512::from_str(d_str));
 
-    let c_str = CStr::from_ptr(common_point).to_str().unwrap();
-    let cp = H512::from_str(c_str).unwrap();
+    let c_str = trychar!(CStr::from_ptr(common_point).to_str());
+    let cp = trychar!(H512::from_str(c_str));
 
-    let dt_str = CStr::from_ptr(data).to_str().unwrap();
-    let dd = hex::decode(dt_str).unwrap();
+    let dt_str = trychar!(CStr::from_ptr(data).to_str());
+    let dd = trychar!(hex::decode(dt_str));
 
     let mut shadows = Vec::new();
-    let len = isize::try_from(shadow_len).unwrap();
+    let len = trychar!(isize::try_from(shadow_len));
     for i in 0 ..len {
         let sh: *const c_char = *(decrypt_shadows.offset(i));
-        let sh_str = CStr::from_ptr(sh).to_str().unwrap();
-        let dec = ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, hex::decode(sh_str).unwrap().as_ref()).unwrap();
-        shadows.push(Secret::from_unsafe_slice(dec.as_ref()).unwrap());
+        let sh_str = trychar!(CStr::from_ptr(sh).to_str());
+        let dsh = trychar!(hex::decode(sh_str));
+        let dec = trychar!(ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, dsh.as_ref()));
+        let sc = trychar!(Secret::from_unsafe_slice(dec.as_ref()));
+        std::mem::forget(sh);
+        shadows.push(sc);
     }
-    let dec = decrypt_document_with_shadow(ds, cp, shadows, dd);
-    let ded = hex::encode(dec.unwrap());
-    let res = CString::new(ded).unwrap();
+    let dec = trychar!(decrypt_document_with_shadow(ds, cp, shadows, dd));
+    let ded = hex::encode(dec);
+    let res = trychar!(CString::new(ded));
     let r = res.as_ptr();
     std::mem::forget(res);
+    std::mem::forget(secret);
+    std::mem::forget(decrypted_secret);
+    std::mem::forget(common_point);
+    std::mem::forget(data);
+    std::mem::forget(decrypt_shadows);
     r
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn decrypt(key: *const c_char, data: *const c_char) -> *const c_char {
-    let k_str = CStr::from_ptr(key).to_str().unwrap();
-    let ky = hex::decode(k_str).unwrap();
+    let k_str = trychar!(CStr::from_ptr(key).to_str());
+    let ky = trychar!(hex::decode(k_str));
 
-    let dt_str = CStr::from_ptr(data).to_str().unwrap();
-    let dd = hex::decode(dt_str).unwrap();
-    let dec = decrypt_document(ky, dd).unwrap();
+    let dt_str = trychar!(CStr::from_ptr(data).to_str());
+    let dd = trychar!(hex::decode(dt_str));
+    let dec = trychar!(decrypt_document(ky, dd));
     let ded = hex::encode(dec);
-    let res = CString::new(ded).unwrap();
+    let res = trychar!(CString::new(ded));
     let r = res.as_ptr();
     std::mem::forget(res);
+    std::mem::forget(key);
+    std::mem::forget(data);
     r
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn decrypt_key(secret: *const c_char, decrypted_secret: *const c_char, common_point: *const c_char, decrypt_shadows: *const *const c_char, shadow_len : usize) -> *const c_char {
-    let s_str = CStr::from_ptr(secret).to_str().unwrap();
-    let sk = Secret::from_str(s_str).unwrap();
+    let s_str = trychar!(CStr::from_ptr(secret).to_str());
+    let sk = trychar!(Secret::from_str(s_str));
 
-    let d_str = CStr::from_ptr(decrypted_secret).to_str().unwrap();
-    let ds = H512::from_str(d_str).unwrap();
+    let d_str = trychar!(CStr::from_ptr(decrypted_secret).to_str());
+    let ds = trychar!(H512::from_str(d_str));
 
-    let c_str = CStr::from_ptr(common_point).to_str().unwrap();
-    let cp = H512::from_str(c_str).unwrap();
+    let c_str = trychar!(CStr::from_ptr(common_point).to_str());
+    let cp = trychar!(H512::from_str(c_str));
     
     let mut shadows = Vec::new();
-    let len = isize::try_from(shadow_len).unwrap();
+    let len = trychar!(isize::try_from(shadow_len));
     for i in 0 ..len {
         let sh: *const c_char = *(decrypt_shadows.offset(i));
-        let sh_str = CStr::from_ptr(sh).to_str().unwrap();
-        let dec = ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, hex::decode(sh_str).unwrap().as_ref()).unwrap();
-        shadows.push(Secret::from_unsafe_slice(dec.as_ref()).unwrap());
+        let sh_str = trychar!(CStr::from_ptr(sh).to_str());
+        let dsh = trychar!(hex::decode(sh_str));
+        let dec = trychar!(ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, dsh.as_ref()));
+        let sc = trychar!(Secret::from_unsafe_slice(dec.as_ref()));
+        std::mem::forget(sh);
+        shadows.push(sc);
     }
     
-    let dec = decrypt_with_shadow_coefficients(ds, cp, shadows).unwrap();
+    let dec = trychar!(decrypt_with_shadow_coefficients(ds, cp, shadows));
     let ded = hex::encode(dec);
-    let res = CString::new(ded).unwrap();
+    let res = trychar!(CString::new(ded));
     let r = res.as_ptr();
     std::mem::forget(res);
+    std::mem::forget(secret);
+    std::mem::forget(decrypted_secret);
+    std::mem::forget(common_point);
+    std::mem::forget(decrypt_shadows);
     r
 }

@@ -17,4 +17,4 @@ rustc-hex = "2.0.1"
 hex = "0.3.2"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["staticlib","cdylib"]

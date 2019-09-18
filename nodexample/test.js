@@ -15,7 +15,7 @@ var DocumentKey = Struct({
 var DocKeyPtr = ref.refType(DocumentKey);
 
 //let lib = ffi.Library('../target/debug/libsecretstore.dylib', {
-let lib = ffi.Library('../target/release/libsecretstore.dylib', {
+let lib = ffi.Library('target/release/libsecretstore.dylib', {
     sign_hash: ['string', ['string', 'string']],
     get_document_key : [DocKeyPtr, ['string','string']],
     encrypt : ['string',['string', 'string', 'string']],
