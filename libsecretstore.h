@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ENCRYPTION_ERROR -32055
-
 typedef struct {
   /**
    * Common encryption point. Pass this to Secret Store 'Document key storing session'
@@ -20,23 +18,25 @@ typedef struct {
   const char *encrypted_key;
 } DocumentKey;
 
-const char *decrypt(const char *key, const char *data);
+const char *ss_echo(const char *val);
 
-const char *decrypt_key(const char *secret,
+const char *ss_decrypt(const char *key, const char *data);
+
+const char *ss_decrypt_key(const char *secret,
                         const char *decrypted_secret,
                         const char *common_point,
                         const char *const *decrypt_shadows,
                         uintptr_t shadow_len);
 
-const char *decrypt_shadow(const char *secret,
+const char *ss_decrypt_shadow(const char *secret,
                            const char *decrypted_secret,
                            const char *common_point,
                            const char *const *decrypt_shadows,
                            uintptr_t shadow_len,
                            const char *data);
 
-const char *encrypt(const char *secret, const char *key, const char *data);
+const char *ss_encrypt(const char *secret, const char *key, const char *data);
 
-const DocumentKey *get_document_key(const char *secret, const char *public_);
+const DocumentKey *ss_get_document_key(const char *secret, const char *public_);
 
-const char *sign_hash(const char *secret, const char *hash);
+const char *ss_sign_hash(const char *secret, const char *hash);

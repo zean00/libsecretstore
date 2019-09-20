@@ -16,12 +16,13 @@ var DocKeyPtr = ref.refType(DocumentKey);
 
 //let lib = ffi.Library('../target/debug/libsecretstore.dylib', {
 let lib = ffi.Library('target/release/libsecretstore.dylib', {
-    sign_hash: ['string', ['string', 'string']],
-    get_document_key : [DocKeyPtr, ['string','string']],
-    encrypt : ['string',['string', 'string', 'string']],
-    decrypt_shadow : ['string', ['string', 'string', 'string', CStringArray,'int', 'string']],
-    decrypt : ['string', ['string', 'string']],
-    decrypt_key : ['string', ['string', 'string', 'string', CStringArray, 'int']]
+    ss_sign_hash: ['string', ['string', 'string']],
+    ss_get_document_key : [DocKeyPtr, ['string','string']],
+    ss_encrypt : ['string',['string', 'string', 'string']],
+    ss_decrypt_shadow : ['string', ['string', 'string', 'string', CStringArray,'int', 'string']],
+    ss_decrypt : ['string', ['string', 'string']],
+    ss_decrypt_key : ['string', ['string', 'string', 'string', CStringArray, 'int']],
+    ss_echo : ['string', ['string']]
 });
 
 const sk = "d104698a5c3bd61203a2c7fc74b68d8f7f021901e244fb9569c374989f24f3be";
@@ -36,23 +37,25 @@ const chiper = "7484d19a644f60a24e22cc6ee78165588d6aed15ca10a8cb988bc9d9ec1ae2e1
 
 const hobj = crypto.createHash('sha256').update("Sahal Arafat Zain");
 const nhash = hobj.digest('hex');
-const sign = lib.sign_hash(sk, nhash);
+const sign = lib.ss_sign_hash(sk, nhash);
 console.log(sign);
 //console.log(sign);
-const dk = lib.get_document_key(sk, serverKey);
+const dk = lib.ss_get_document_key(sk, serverKey);
 const eset = dk.deref();
 //console.log(eset.encrypted_key);
 
-const enc = lib.encrypt(sk, eset.encrypted_key, new Buffer('Sahal Arafat Zain').toString('hex'));
+const enc = lib.ss_encrypt(sk, eset.encrypted_key, new Buffer('Sahal Arafat Zain').toString('hex'));
 console.log(enc);
 
 
 var shadowArr = new CStringArray(shadows)
-const dkey = lib.decrypt_key(sk2, dec_secret, common, shadowArr, 2);
-const dec = lib.decrypt_shadow(sk2, dec_secret, common, shadowArr, 2, chiper);
+const dkey = lib.ss_decrypt_key(sk2, dec_secret, common, shadowArr, 2);
+const dec = lib.ss_decrypt_shadow(sk2, dec_secret, common, shadowArr, 2, chiper);
 console.log(dec)
 console.log(new Buffer(dec,'hex').toString())
 console.log(dkey)
-const dec2 = lib.decrypt(dkey, chiper);
+const dec2 = lib.ss_decrypt(dkey, chiper);
 console.log(new Buffer(dec2,'hex').toString())
+
+console.log(lib.ss_echo("test"))
 

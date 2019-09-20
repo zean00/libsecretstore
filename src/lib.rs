@@ -63,7 +63,12 @@ impl Default for DocumentKey {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_document_key(secret: *const c_char, public: *const c_char) -> *const DocumentKey {  
+pub unsafe extern "C" fn ss_echo(val: *const c_char) -> *const c_char {
+   return val;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ss_get_document_key(secret: *const c_char, public: *const c_char) -> *const DocumentKey {  
     let s_str = trybox!(CStr::from_ptr(secret).to_str());
     let sk = trybox!(Secret::from_str(s_str));
     let p_str = trybox!(CStr::from_ptr(public).to_str());
@@ -99,7 +104,7 @@ pub unsafe extern "C" fn get_document_key(secret: *const c_char, public: *const 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn sign_hash(secret: *const c_char, hash: *const c_char) -> *const c_char { 
+pub unsafe extern "C" fn ss_sign_hash(secret: *const c_char, hash: *const c_char) -> *const c_char { 
     let s_str = trychar!(CStr::from_ptr(secret).to_str());
     let sk = trychar!(Secret::from_str(s_str));
 
@@ -117,7 +122,7 @@ pub unsafe extern "C" fn sign_hash(secret: *const c_char, hash: *const c_char) -
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn encrypt(secret: *const c_char, ekey: *const c_char, data: *const c_char) -> *const c_char {
+pub unsafe extern "C" fn ss_encrypt(secret: *const c_char, ekey: *const c_char, data: *const c_char) -> *const c_char {
     let s_str = trychar!(CStr::from_ptr(secret).to_str());
     let sk = trychar!(Secret::from_str(s_str));
 
@@ -140,7 +145,7 @@ pub unsafe extern "C" fn encrypt(secret: *const c_char, ekey: *const c_char, dat
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn decrypt_shadow(secret: *const c_char, decrypted_secret: *const c_char, common_point: *const c_char, decrypt_shadows: *const *const c_char, shadow_len : usize, data: *const c_char) -> *const c_char {
+pub unsafe extern "C" fn ss_decrypt_shadow(secret: *const c_char, decrypted_secret: *const c_char, common_point: *const c_char, decrypt_shadows: *const *const c_char, shadow_len : usize, data: *const c_char) -> *const c_char {
     let s_str = trychar!(CStr::from_ptr(secret).to_str());
     let sk = trychar!(Secret::from_str(s_str));
 
@@ -178,7 +183,7 @@ pub unsafe extern "C" fn decrypt_shadow(secret: *const c_char, decrypted_secret:
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn decrypt(key: *const c_char, data: *const c_char) -> *const c_char {
+pub unsafe extern "C" fn ss_decrypt(key: *const c_char, data: *const c_char) -> *const c_char {
     let k_str = trychar!(CStr::from_ptr(key).to_str());
     let ky = trychar!(hex::decode(k_str));
 
@@ -195,7 +200,7 @@ pub unsafe extern "C" fn decrypt(key: *const c_char, data: *const c_char) -> *co
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn decrypt_key(secret: *const c_char, decrypted_secret: *const c_char, common_point: *const c_char, decrypt_shadows: *const *const c_char, shadow_len : usize) -> *const c_char {
+pub unsafe extern "C" fn ss_decrypt_key(secret: *const c_char, decrypted_secret: *const c_char, common_point: *const c_char, decrypt_shadows: *const *const c_char, shadow_len : usize) -> *const c_char {
     let s_str = trychar!(CStr::from_ptr(secret).to_str());
     let sk = trychar!(Secret::from_str(s_str));
 
