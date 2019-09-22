@@ -20,6 +20,8 @@ typedef struct {
 
 const char *ss_echo(const char *val);
 
+const char *ss_shared_secret(const char *public, const char *secret);
+
 const char *ss_decrypt(const char *key, const char *data);
 
 const char *ss_decrypt_key(const char *secret,

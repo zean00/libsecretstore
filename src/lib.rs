@@ -18,6 +18,10 @@ use hex;
 //use std::ptr;
 use std::boxed::Box;
 use std::convert::TryFrom;
+use secp256k1::key;
+use secp256k1::ecdh::SharedSecret;
+use std::ops::Index;
+use std::ops;
 
 macro_rules! trychar {
     ($e:expr) => (match $e {
@@ -66,6 +70,27 @@ impl Default for DocumentKey {
 pub unsafe extern "C" fn ss_echo(val: *const c_char) -> *const c_char {
    return val;
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn ss_shared_secret(public: *const c_char, secret: *const c_char) -> *const c_char {
+    let s_str = trychar!(CStr::from_ptr(secret).to_str());
+    let sec = trychar!(Secret::from_str(s_str));
+    let sk = trychar!(sec.to_secp256k1_secret());
+
+    let p_str = trychar!(CStr::from_ptr(public).to_str());
+    let pubk = trychar!(hex::decode(p_str));
+    let pk = trychar!(key::PublicKey::from_slice(&ethkey::SECP256K1, pubk.as_ref()));
+    
+    let sec = SharedSecret::new(&ethkey::SECP256K1, &pk, &sk);
+    let hs = hex::encode(sec.index(ops::RangeFull{}));
+    let res = trychar!(CString::new(hs));
+    let r = res.as_ptr();
+    std::mem::forget(res);
+    std::mem::forget(secret);
+    std::mem::forget(public);
+    r
+}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn ss_get_document_key(secret: *const c_char, public: *const c_char) -> *const DocumentKey {  

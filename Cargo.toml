@@ -15,6 +15,7 @@ tiny-keccak = "1.4"
 serde = { version = "1.0.100", features = ["derive"] }
 rustc-hex = "2.0.1"
 hex = "0.3.2"
+eth-secp256k1 = { git = "https://github.com/paritytech/rust-secp256k1" }
 
 [lib]
 crate-type = ["staticlib","cdylib"]

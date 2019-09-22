@@ -22,7 +22,8 @@ let lib = ffi.Library('target/release/libsecretstore.dylib', {
     ss_decrypt_shadow : ['string', ['string', 'string', 'string', CStringArray,'int', 'string']],
     ss_decrypt : ['string', ['string', 'string']],
     ss_decrypt_key : ['string', ['string', 'string', 'string', CStringArray, 'int']],
-    ss_echo : ['string', ['string']]
+    ss_echo : ['string', ['string']],
+    ss_shared_secret: ['string',['string', 'string']]
 });
 
 const sk = "d104698a5c3bd61203a2c7fc74b68d8f7f021901e244fb9569c374989f24f3be";
@@ -58,4 +59,14 @@ const dec2 = lib.ss_decrypt(dkey, chiper);
 console.log(new Buffer(dec2,'hex').toString())
 
 console.log(lib.ss_echo("test"))
+
+const sec1 = "c3519ab5c003b5476905b4750d20f2179eabf3edba7b7ed4f671b2a9586424dc"
+const sec2 = "d307ffa3c666d2b30cf29839806e89a9d6d67ca0fd743a8c6c910e013475b87c"
+const pub1 = "04446193ece586aa61849fc91842f866a94a54b82f8db3d51ef2d5135a8b7bf41c7c54c83ce4a7302ec17683615664e05e72afb1da5c607ec213d783f21f62cdc9"
+const pub2 = "04245848cbd4105b0522e09bf19a8e048840c4bd143a10b6f7bc48f263c8dfaab3523de091ca4c9ef788bd5f02971f36a1c2a10fcf789a7507f366e513df9d4aee"
+
+const shared1 = lib.ss_shared_secret(pub2, sec1)
+const shared2 = lib.ss_shared_secret(pub1, sec2)
+console.log(shared1)
+console.log(shared2)
 
