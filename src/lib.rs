@@ -6,8 +6,8 @@ mod types;
 
 use crypto::DEFAULT_MAC;
 use ethereum_types::{H256, H512};
-use ethkey::{Secret, KeyPair, sign};
-
+//use ethkey::{Secret, KeyPair, sign};
+use crypto::publickey::{Secret, KeyPair, sign};
 use helpers::secretstore::{generate_document_key, encrypt_document,
 	decrypt_document, decrypt_document_with_shadow, decrypt_with_shadow_coefficients};
 use std::ffi::CStr;
@@ -18,10 +18,8 @@ use hex;
 //use std::ptr;
 use std::boxed::Box;
 use std::convert::TryFrom;
-use secp256k1::key;
-use secp256k1::ecdh::SharedSecret;
-use std::ops::Index;
-use std::ops;
+use secp256k1::{PublicKey,SecretKey,SharedSecret, PublicKeyFormat};
+use sha2::Sha256;
 
 macro_rules! trychar {
     ($e:expr) => (match $e {
@@ -74,15 +72,19 @@ pub unsafe extern "C" fn ss_echo(val: *const c_char) -> *const c_char {
 #[no_mangle]
 pub unsafe extern "C" fn ss_shared_secret(public: *const c_char, secret: *const c_char) -> *const c_char {
     let s_str = trychar!(CStr::from_ptr(secret).to_str());
-    let sec = trychar!(Secret::from_str(s_str));
-    let sk = trychar!(sec.to_secp256k1_secret());
+    let sec = trychar!(hex::decode(s_str));
+    //let sec = trychar!(Secret::from_str(s_str));
+    //let sk = trychar!(sec.to_secp256k1_secret());
+    let sk = trychar!(SecretKey::parse_slice(sec.as_ref()));
 
     let p_str = trychar!(CStr::from_ptr(public).to_str());
     let pubk = trychar!(hex::decode(p_str));
-    let pk = trychar!(key::PublicKey::from_slice(&ethkey::SECP256K1, pubk.as_ref()));
+    let kf = PublicKeyFormat::Full;
+    let pk = trychar!(PublicKey::parse_slice(pubk.as_ref(), Some(kf)));
     
-    let sec = SharedSecret::new(&ethkey::SECP256K1, &pk, &sk);
-    let hs = hex::encode(sec.index(ops::RangeFull{}));
+    let sec = trychar!(SharedSecret::<Sha256>::new(&pk, &sk));
+    let hs = hex::encode(sec.as_ref());
+    //let hs = hex::encode(sec.index(ops::RangeFull{}));
     let res = trychar!(CString::new(hs));
     let r = res.as_ptr();
     std::mem::forget(res);
@@ -153,7 +155,8 @@ pub unsafe extern "C" fn ss_encrypt(secret: *const c_char, ekey: *const c_char, 
 
     let k_str = trychar!(CStr::from_ptr(ekey).to_str());
     let bkey = trychar!(hex::decode(k_str));
-    let key = trychar!(ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, bkey.as_ref()));
+    //let key = trychar!(ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, bkey.as_ref()));
+    let key = trychar!(crypto::publickey::ecies::decrypt(&sk, &DEFAULT_MAC, bkey.as_ref()));
 
     let dt_str = trychar!(CStr::from_ptr(data).to_str());
     let dd = trychar!(hex::decode(dt_str));
@@ -189,8 +192,8 @@ pub unsafe extern "C" fn ss_decrypt_shadow(secret: *const c_char, decrypted_secr
         let sh: *const c_char = *(decrypt_shadows.offset(i));
         let sh_str = trychar!(CStr::from_ptr(sh).to_str());
         let dsh = trychar!(hex::decode(sh_str));
-        let dec = trychar!(ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, dsh.as_ref()));
-        let sc = trychar!(Secret::from_unsafe_slice(dec.as_ref()));
+        let dec = trychar!(crypto::publickey::ecies::decrypt(&sk, &DEFAULT_MAC, dsh.as_ref()));
+        let sc = trychar!(Secret::import_key(dec.as_ref()));
         std::mem::forget(sh);
         shadows.push(sc);
     }
@@ -241,8 +244,8 @@ pub unsafe extern "C" fn ss_decrypt_key(secret: *const c_char, decrypted_secret:
         let sh: *const c_char = *(decrypt_shadows.offset(i));
         let sh_str = trychar!(CStr::from_ptr(sh).to_str());
         let dsh = trychar!(hex::decode(sh_str));
-        let dec = trychar!(ethkey::crypto::ecies::decrypt(&sk, &DEFAULT_MAC, dsh.as_ref()));
-        let sc = trychar!(Secret::from_unsafe_slice(dec.as_ref()));
+        let dec = trychar!(crypto::publickey::ecies::decrypt(&sk, &DEFAULT_MAC, dsh.as_ref()));
+        let sc = trychar!(Secret::import_key(dec.as_ref()));
         std::mem::forget(sh);
         shadows.push(sc);
     }

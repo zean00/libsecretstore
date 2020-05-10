@@ -16,7 +16,7 @@
 
 use ethereum_types::H512;
 use bytes::Bytes;
-use serde::Serialize;
+use serde_derive::Serialize;
 
 /// Encrypted document key.
 #[derive(Default, Debug, Serialize, PartialEq)]

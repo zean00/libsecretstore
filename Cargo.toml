@@ -5,17 +5,21 @@ authors = ["Sahal Zain <zean00zone@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-jsonrpc-core = "12.0.0"
-ethereum-types = "0.6.0"
-ethkey = { path = "./ethkey" }
-rand = "0.6"
-parity-crypto = "0.4.0"
+jsonrpc-core = "14.0.5"
+ethereum-types = "0.9.0"
+#ethkey = { path = "./ethkey" }
+rand = "0.7.3"
+parity-crypto = { version = "0.6.1", features = ["publickey"] }
 parity-bytes = "0.1"
-tiny-keccak = "1.4"
-serde = { version = "1.0.100", features = ["derive"] }
-rustc-hex = "2.0.1"
+#tiny-keccak = "2.0.2"
+#serde = { version = "1.0.100", features = ["derive"] }
+serde = "1.0"
+serde_derive = "1.0"
+rustc-hex = "2.1.0"
 hex = "0.3.2"
-eth-secp256k1 = { git = "https://github.com/paritytech/rust-secp256k1" }
+libsecp256k1 = "0.3.5"
+sha2 = "0.8"
+#eth-secp256k1 = { git = "https://github.com/paritytech/rust-secp256k1" }
 
 [lib]
 crate-type = ["staticlib","cdylib"]
